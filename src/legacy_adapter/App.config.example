@@ -1,0 +1,56 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+    <startup> 
+        <supportedRuntime version="v4.0" sku=".NETFramework,Version=v4.7.2" />
+    </startup>
+  <appSettings>
+    <add key="PathOpera" value="[CAMINHO_OPERA]" />
+    <add key="PathChrome" value="[CAMINHO_CHROME]" />
+    <add key="PathFireFox" value="[CAMINHO_FIREFOX]" />
+    <add key="UsuarioInstagram" value="[USUARIO]" />
+    <add key="SenhaInstagram" value="[SENHA]" />
+    <add key="UsuarioFaceBook" value="[USUARIO]" />
+    <add key="SenhaFaceBook" value="[SENHA]" />
+    <add key="UsuarioTwitter" value="[USUARIO]" />
+    <add key="SenhaTwitter" value="[SENHA]" />
+    <add key="Browser" value="false" />
+    <add key="ClientSettingsProvider.ServiceUri" value="" />
+  </appSettings>
+  <connectionStrings>
+    <add name="IMAGEMWEB" connectionString="Data Source=[SERVIDOR];Initial Catalog=[DATABASE];User ID=[USUARIO];Password=[SENHA];Application Name=TopClipImagemWeb" providerName="System.Data.SqlClient" />
+    <add name="TopClipPreProducaoEntities" connectionString="metadata=res://*/Model1.csdl|res://*/Model1.ssdl|res://*/Model1.msl;provider=System.Data.SqlClient;provider connection string=&quot;data source=[SERVIDOR];initial catalog=[DATABASE];persist security info=True;user id=[USUARIO];password=[SENHA];multipleactiveresultsets=True;App=EntityFramework&quot;" providerName="System.Data.EntityClient" />
+    <add name="TopClipPre" connectionString="metadata=res://*/Model1.csdl|res://*/Model1.ssdl|res://*/Model1.msl;provider=System.Data.SqlClient;provider connection string=&quot;Data Source=[SERVIDOR];Initial Catalog=[DATABASE];Persist Security Info=True;User ID=[USUARIO];Password=[SENHA];MultipleActiveResultSets=True;Application Name=EntityFramework&quot;" providerName="System.Data.EntityClient" />
+    <add name="TopClipPreEntities" connectionString="metadata=res://*/ModelRegiao.csdl|res://*/ModelRegiao.ssdl|res://*/ModelRegiao.msl;provider=System.Data.SqlClient;provider connection string=&quot;Data Source=[SERVIDOR];Initial Catalog=[DATABASE];Persist Security Info=True;User ID=[USUARIO];Password=[SENHA];MultipleActiveResultSets=True;Application Name=EntityFramework&quot;" providerName="System.Data.EntityClient" />
+    <add name="CapturaSiteProducaoEntities" connectionString="metadata=res://*/Model1.csdl|res://*/Model1.ssdl|res://*/Model1.msl;provider=System.Data.SqlClient;provider connection string=&quot;Data Source=[SERVIDOR];Initial Catalog=[DATABASE];Persist Security Info=True;User ID=[USUARIO];Password=[SENHA];MultipleActiveResultSets=True;Application Name=EntityFramework&quot;" providerName="System.Data.EntityClient" />
+    <add name="TopClipPalavrasEntities" connectionString="metadata=res://*/ModelPalavra.csdl|res://*/ModelPalavra.ssdl|res://*/ModelPalavra.msl;provider=System.Data.SqlClient;provider connection string=&quot;data source=[SERVIDOR];initial catalog=[DATABASE];persist security info=True;user id=[USUARIO];password=[SENHA];multipleactiveresultsets=True;App=EntityFramework&quot;" providerName="System.Data.EntityClient" />
+    <add name="ContextoPreProducaoEntities" connectionString="metadata=res://*/ModelContexto.csdl|res://*/ModelContexto.ssdl|res://*/ModelContexto.msl;provider=System.Data.SqlClient;provider connection string=&quot;data source=[SERVIDOR];initial catalog=[DATABASE];persist security info=True;user id=[USUARIO];password=[SENHA];multipleactiveresultsets=True;application name=EntityFramework&quot;" providerName="System.Data.EntityClient" />
+    <add name="ColetaProducaoEntities" connectionString="metadata=res://*/ModelColetaPre.csdl|res://*/ModelColetaPre.ssdl|res://*/ModelColetaPre.msl;provider=System.Data.SqlClient;provider connection string=&quot;data source=[SERVIDOR];initial catalog=[DATABASE];persist security info=True;user id=[USUARIO];password=[SENHA];multipleactiveresultsets=True;application name=EntityFramework&quot;" providerName="System.Data.EntityClient" />
+    <add name="PalavrasEntities" connectionString="metadata=res://*/ModelPalavra.csdl|res://*/ModelPalavra.ssdl|res://*/ModelPalavra.msl;provider=System.Data.SqlClient;provider connection string=&quot;data source=[SERVIDOR];initial catalog=[DATABASE];persist security info=True;user id=[USUARIO];password=[SENHA];MultipleActiveResultSets=True;App=EntityFramework&quot;" providerName="System.Data.EntityClient" />
+    <add name="ImagemWebEntities" connectionString="metadata=res://*/ModelImagemWeb.csdl|res://*/ModelImagemWeb.ssdl|res://*/ModelImagemWeb.msl;provider=System.Data.SqlClient;provider connection string=&quot;data source=[SERVIDOR];initial catalog=[DATABASE];persist security info=True;user id=[USUARIO];password=[SENHA];MultipleActiveResultSets=True;App=EntityFramework&quot;" providerName="System.Data.EntityClient" />
+    <add name="CentimetragemProducao" connectionString="metadata=res://*/ModelCentimetragem.csdl|res://*/ModelCentimetragem.ssdl|res://*/ModelCentimetragem.msl;provider=System.Data.SqlClient;provider connection string=&quot;data source=[SERVIDOR];initial catalog=[DATABASE];persist security info=True;user id=[USUARIO];password=[SENHA];MultipleActiveResultSets=True;App=EntityFramework&quot;" providerName="System.Data.EntityClient" />
+  </connectionStrings>
+  <runtime>
+    <assemblyBinding xmlns="urn:schemas-microsoft-com:asm.v1">
+      <dependentAssembly>
+        <assemblyIdentity name="HtmlAgilityPack" publicKeyToken="bd319b19eaf3b43a" culture="neutral" />
+        <bindingRedirect oldVersion="0.0.0.0-1.11.46.0" newVersion="1.11.46.0" />
+      </dependentAssembly>
+      <dependentAssembly>
+        <assemblyIdentity name="System.Runtime.CompilerServices.Unsafe" publicKeyToken="b03f5f7f11d50a3a" culture="neutral" />
+        <bindingRedirect oldVersion="0.0.0.0-6.0.0.0" newVersion="6.0.0.0" />
+      </dependentAssembly>
+      <dependentAssembly>
+        <assemblyIdentity name="System.Text.Json" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
+        <bindingRedirect oldVersion="0.0.0.0-8.0.0.5" newVersion="8.0.0.5" />
+      </dependentAssembly>
+      <dependentAssembly>
+        <assemblyIdentity name="AngleSharp" publicKeyToken="e83494dcdc6d31ea" culture="neutral" />
+        <bindingRedirect oldVersion="0.0.0.0-0.17.1.0" newVersion="0.17.1.0" />
+      </dependentAssembly>
+      <dependentAssembly>
+        <assemblyIdentity name="System.Memory" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
+        <bindingRedirect oldVersion="0.0.0.0-4.0.1.2" newVersion="4.0.1.2" />
+      </dependentAssembly>
+    </assemblyBinding>
+  </runtime>
+</configuration>

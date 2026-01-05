@@ -1,0 +1,25 @@
+[project]
+name = "midia-social-moderno"
+version = "0.1.0"
+description = "Modern Python scraper for social media using Playwright and Legacy Adapter"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "playwright>=1.49.0",
+    "pyodbc>=5.2.0",
+    "pydantic-settings>=2.7.0",
+    "sqlalchemy>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "rich>=13.0.0",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.0.0",
+    "taskipy>=1.12.0",
+]
+
+[tool.taskipy.tasks]
+run = "python -m src.main"
+test = "pytest tests"
+install_browser = "playwright install chromium"

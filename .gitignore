@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+build/
+dist/
+*.egg-info/
+
+# Secret / Sessions
+.env
+*_state.json
+*_session.json
+src/legacy_adapter/App.config
+
+# Logs
+*.log
+debug_output.txt
+
+# Captures / Outputs
+captures/
+captures/*
+
+# Visual Studio / IDE
+.vs/
+.vscode/
+*.swp
+*.bak
+bin/
+obj/
+*.exe
+*.dll
+*.pdb
+*.sqlite
+
+# OS
+.DS_Store
+Thumbs.db
