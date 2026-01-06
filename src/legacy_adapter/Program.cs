@@ -23,7 +23,7 @@ namespace LegacyAdapter
             {
                 int linkId = int.Parse(args[0]);
                 string imagePath = args[1];
-                string text = File.ReadAllText(args[2]); // args[2] is path to text file to avoid shell escaping issues
+                string text = File.ReadAllText(args[2], System.Text.Encoding.UTF8); // Use UTF8 explicitly
                 DateTime pubDate = DateTime.Parse(args[3]);
                 int veiculo = int.Parse(args[4]);
                 int canal = int.Parse(args[5]);

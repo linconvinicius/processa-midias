@@ -1,7 +1,7 @@
-
 import asyncio
 import os
 import re
+import unicodedata
 from playwright.async_api import Page, TimeoutError
 from src.scraper.core.browser import BrowserManager
 from src.legacy_adapter.run_adapter import run_legacy_adapter
@@ -207,6 +207,10 @@ class FacebookSpider:
             if not text_content:
                 text_content = "Facebook Post Capture"
 
+            # Normalize text (converts recursive/bold math symbols to plain letters)
+            if text_content:
+                text_content = unicodedata.normalize('NFKD', text_content).encode('ascii', 'ignore').decode('ascii')
+
             # Clean extraction for Metadata-heavy results
             if text_content and text_content != "Facebook Post Capture":
                 # Remove artifacts like "Sugerido para você", "Patrocinado", etc.
@@ -321,9 +325,9 @@ class FacebookSpider:
                 
                 print(f"✅ Saved screenshot: {screenshot_path}")
 
-            # Save Text File
+            # Save Text File with BOM
             text_path = f"captures/facebook_{link_id}.txt"
-            with open(text_path, "w", encoding="utf-8") as f:
+            with open(text_path, "w", encoding="utf-8-sig") as f:
                 f.write(text_content)
 
             # DEFER ADAPTER CALL TO PROCESSING SERVICE (Consistency)

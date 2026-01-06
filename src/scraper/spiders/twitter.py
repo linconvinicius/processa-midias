@@ -1,5 +1,6 @@
 import asyncio
 import os
+import unicodedata
 from playwright.async_api import Page, TimeoutError
 from src.scraper.core.browser import BrowserManager
 from src.database.connection import get_settings
@@ -119,6 +120,10 @@ class TwitterSpider:
 
             # Extract content
             tweet_text = await page.locator("[data-testid='tweetText']").first.inner_text()
+            
+            # Normalize Unicode
+            if tweet_text:
+                tweet_text = unicodedata.normalize('NFKD', tweet_text).encode('ascii', 'ignore').decode('ascii')
 
             # Save results
             link_id = link_data.get('link_id', 'unknown')
@@ -128,7 +133,7 @@ class TwitterSpider:
             await page.screenshot(path=screenshot_path, full_page=False)
             
             txt_path = f"captures/twitter_{link_id}.txt"
-            with open(txt_path, "w", encoding="utf-8") as f:
+            with open(txt_path, "w", encoding="utf-8-sig") as f:
                 f.write(tweet_text)
 
             return {

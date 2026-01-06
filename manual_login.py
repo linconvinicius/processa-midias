@@ -8,20 +8,20 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".
 from src.scraper.core.browser import BrowserManager
 
 async def manual_login_flow():
-    print("🚀 Iniciando Modo de Login Manual Unificado...")
-    print("ℹ️  O navegador vai abrir uma janela.")
-    print("👉  Nessa MESMA janela, abra abas e faça login em:")
+    print("Iniciando Modo de Login Manual Unificado...")
+    print("O navegador vai abrir uma janela.")
+    print("Nessa MESMA janela, abra abas e faça login em:")
     print("    1. Twitter/X (x.com)")
     print("    2. Instagram (instagram.com)")
     print("    3. Facebook (facebook.com)")
-    print("    (Você pode fazer apenas um ou todos, conforme precisar)")
+    print("    (Voce pode fazer apenas um ou todos, conforme precisar)")
     
     manager = BrowserManager()
     manager.settings.HEADLESS = False 
     
     try:
         # Ask user which state to load as base
-        print("\n📂 Carregar sessão existente como base?")
+        print("\nCarregar sessao existente como base?")
         print("1. Twitter")
         print("2. Instagram")
         print("3. Facebook")
@@ -34,7 +34,7 @@ async def manual_login_flow():
         elif choice == "3": base_state = "facebook_state.json"
         
         if base_state and not os.path.exists(base_state):
-            print(f"⚠️ Arquivo {base_state} não encontrado. Iniciando limpo.")
+            print(f"Arquivo {base_state} nao encontrado. Iniciando limpo.")
             base_state = None
 
         context = await manager.new_context(storage_state=base_state) 
@@ -47,13 +47,13 @@ async def manual_login_flow():
         
         await page.goto(start_url) 
         
-        print("\n⏳ NAVEGADOR ABERTO!")
-        print("⚡ Realize os logins necessários. Você pode abrir novas abas para outros sites.")
-        print("⌨️  QUANDO TERMINAR, VOLTE AQUI.")
+        print("\nNAVEGADOR ABERTO!")
+        print("Realize os logins necessarios. Voce pode abrir novas abas para outros sites.")
+        print("QUANDO TERMINAR, VOLTE AQUI.")
         
         await asyncio.to_thread(input, ">> Pressione ENTER para selecionar o que salvar <<")
         
-        print("\n💾 O que você deseja salvar?")
+        print("\nO que voce deseja salvar?")
         print("T. Salvar TUDO (Atualiza as 3 redes)")
         print("F. Apenas Facebook")
         print("X. Apenas Twitter")
@@ -69,12 +69,12 @@ async def manual_login_flow():
         
         for f in files_to_save:
             await context.storage_state(path=f)
-            print(f"💾 Sessão salva: {f}")
+            print(f"Sessao salva: {f}")
             
-        print("🎉 Pronto!")
+        print("Pronto!")
             
     except Exception as e:
-        print(f"❌ Erro: {e}")
+        print(f"Erro: {e}")
     finally:
         await manager.close()
 

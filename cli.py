@@ -1,7 +1,17 @@
 import asyncio
 import argparse
 import logging
+import sys
 from src.services.processing_service import SocialMediaProcessor
+
+# Ensure terminal encoding handles emojis/UTF-8
+if sys.stdout.encoding.lower() != 'utf-8':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except AttributeError:
+        # Fallback for older python
+        pass
 
 logging.basicConfig(
     level=logging.INFO,
@@ -17,7 +27,7 @@ async def main():
 
     # Process command
     process_parser = subparsers.add_parser('process', help='Process social media links')
-    process_parser.add_argument('--id', type=int, help='Process a specific link by ID')
+    process_parser.add_argument('--id', nargs='+', help='Process specific link IDs (supports comma-separated list)')
     process_parser.add_argument('--batch', action='store_true', help='Process a batch of links')
     process_parser.add_argument('--limit', type=int, default=10, help='Number of links to process in batch')
     process_parser.add_argument('--platform', type=str, help='Filter by platform (Instagram, Twitter, Facebook)')
@@ -27,7 +37,7 @@ async def main():
 
     # Reset command
     reset_parser = subparsers.add_parser('reset', help='Reset link status to pending')
-    reset_parser.add_argument('--id', type=int, required=True, help='Link ID to reset')
+    reset_parser.add_argument('--id', nargs='+', required=True, help='Link IDs to reset (supports comma-separated list)')
 
     # Queue command
     queue_parser = subparsers.add_parser('queue', help='Show pending links in queue')
@@ -41,8 +51,23 @@ async def main():
     try:
         if args.command == 'process':
             if args.id:
+                # Parse multiple IDs which might contain commas
+                target_ids = []
+                for id_str in args.id:
+                    # Split by comma and clean up whitespace/punctuation
+                    parts = [p.strip(' ,').strip() for p in id_str.split(',')]
+                    for p in parts:
+                        if p.isdigit():
+                            target_ids.append(int(p))
+                
+                if not target_ids:
+                    print("❌ No valid IDs found.")
+                    return
+
                 await processor.initialize()
-                await processor.process_link(args.id)
+                for lid in target_ids:
+                    print(f"🚀 Processing link {lid}...")
+                    await processor.process_link(lid)
             elif args.batch:
                 await processor.process_batch(limit=args.limit, platform=args.platform)
             else:
@@ -56,8 +81,22 @@ async def main():
             conn.close()
         
         elif args.command == 'reset':
-            processor.repo.update_link_status(args.id, 1)
-            print(f"Link {args.id} reset to Pending (1).")
+            # Parse multiple IDs which might contain commas
+            target_ids = []
+            for id_str in args.id:
+                parts = [p.strip(' ,').strip() for p in id_str.split(',')]
+                for p in parts:
+                    if p.isdigit():
+                        target_ids.append(int(p))
+            
+            if not target_ids:
+                print("❌ No valid IDs found to reset.")
+                return
+
+            for lid in target_ids:
+                processor.repo.delete_materia_by_link(lid)
+                processor.repo.update_link_status(lid, 1)
+                print(f"✅ Link {lid} fully reset to Pending (1).")
         
         elif crud_command := args.command == 'queue':
             links = processor.repo.get_pending_links(limit=args.limit, platform=args.platform)
