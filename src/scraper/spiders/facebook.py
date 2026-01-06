@@ -99,7 +99,7 @@ class FacebookSpider:
             
             print(f"🔗 Navigating to {url}...")
             await page.goto(url, timeout=60000, wait_until="load")
-            await page.wait_for_load_state("networkidle")
+            await page.wait_for_load_state("networkidle", timeout=60000)
             
             # Handling "Content Not Available"
             # Text: "This content isn't available right now" or "Este conteúdo não está disponível agora"
@@ -116,10 +116,10 @@ class FacebookSpider:
                 if await dialog.count() > 0:
                     print("🔵 Detected Dialog/Modal view.")
                     # Wait for message in dialog
-                    await page.wait_for_selector("div[role='dialog'] [data-ad-preview='message'], div[role='dialog'] [data-ad-rendering-role='story_message']", timeout=10000)
+                    await page.wait_for_selector("div[role='dialog'] [data-ad-preview='message'], div[role='dialog'] [data-ad-rendering-role='story_message']", timeout=45000)
                     article = dialog
                 else:
-                    await page.wait_for_selector("div[role='article'], div[role='main']", timeout=15000)
+                    await page.wait_for_selector("div[role='article'], div[role='main']", timeout=45000)
                     article = page.locator("div[role='article']").first
                 
                 # Expand "See more" if present (common in FB)

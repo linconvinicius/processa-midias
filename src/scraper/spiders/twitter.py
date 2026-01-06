@@ -88,7 +88,7 @@ class TwitterSpider:
                 await page.goto(url, timeout=90000, wait_until="networkidle")
             else:
                 # Wait for content to stabilize
-                await page.wait_for_load_state("networkidle", timeout=10000)
+                await page.wait_for_load_state("networkidle", timeout=60000)
 
             # Check for 404 or prohibited content immediately
             # We check multiple patterns including the one reported by the user
@@ -111,7 +111,7 @@ class TwitterSpider:
 
             # Wait for main content (the tweet text)
             try:
-                await page.wait_for_selector("[data-testid='tweetText']", timeout=20000)
+                await page.wait_for_selector("[data-testid='tweetText']", timeout=45000)
             except TimeoutError:
                 # Double check for 404 if timeout occurred
                 if await page.locator("text='Ih, esta página não existe'").count() > 0:

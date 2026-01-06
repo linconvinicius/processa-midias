@@ -76,7 +76,7 @@ class InstagramSpider:
             
             # Wait for main content
             try:
-                await page.wait_for_selector("main[role='main'], article, div.x1yvgwvq", timeout=15000)
+                await page.wait_for_selector("main[role='main'], article, div.x1yvgwvq", timeout=45000)
             except TimeoutError:
                 content = await page.content()
                 if "Esta página não está disponível" in content or "Page Not Found" in content:
@@ -107,7 +107,7 @@ class InstagramSpider:
                 await page.mouse.wheel(0, -500)
                 await asyncio.sleep(0.8)
                 # Wait for images to be visible
-                await page.wait_for_selector("main img, .x1yvgwvq img, article img", timeout=10000)
+                await page.wait_for_selector("main img, .x1yvgwvq img, article img", timeout=30000)
             except:
                 pass
 

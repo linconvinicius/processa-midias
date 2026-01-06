@@ -3,11 +3,29 @@ import pyodbc
 
 class SocialMediaRepository:
     def __init__(self):
-        db = DatabaseConnection()
-        self.conn = db.get_connection()
+        self._db = DatabaseConnection()
+        self.conn = self._db.get_connection()
+    
+    def _ensure_connection(self):
+        """Checks if connection is alive and attempts to reconnect if not."""
+        try:
+            # Simple check query
+            self.conn.cursor().execute("SELECT 1")
+        except (pyodbc.Error, pyodbc.ProgrammingError, AttributeError):
+            print("🔄 Database connection lost. Reconnecting...")
+            try:
+                if self.conn:
+                    try: self.conn.close()
+                    except: pass
+                self.conn = self._db.get_connection()
+                print("✅ Reconnected to database.")
+            except Exception as e:
+                print(f"❌ Failed to reconnect: {e}")
+                raise
     
     def get_link_by_id(self, link_id: int):
         """Fetches a single link by ID."""
+        self._ensure_connection()
         cursor = self.conn.cursor()
         query = """
         SELECT 
@@ -38,6 +56,7 @@ class SocialMediaRepository:
         Status 1 = Pending, 9 = Retry.
         Platform: 'instagram', 'facebook', or None (all)
         """
+        self._ensure_connection()
         cursor = self.conn.cursor()
         
         # Base query
@@ -91,6 +110,7 @@ class SocialMediaRepository:
 
     def update_link_status(self, link_id: int, status: int, materia_id: int = None):
         """Updates status and optionally materia_id."""
+        self._ensure_connection()
         cursor = self.conn.cursor()
         if materia_id:
             query = "UPDATE TopClipPreProducao.dbo.Link_MidiaSocial_Web SET LIMW_IN_STATUS = ?, MATE_CD_MATERIA = ? WHERE LIMW_CD_LINK_MIDIA_SOCIAL_WEB = ?"
@@ -110,6 +130,7 @@ class SocialMediaRepository:
 
     def check_existing_url(self, url: str):
         """Checks if a URL already exists."""
+        self._ensure_connection()
         cursor = self.conn.cursor()
         query = "SELECT COUNT(*) FROM TopClipPreProducao.dbo.Link_MidiaSocial_Web WHERE LIMW_TX_LINK = ?"
         try:
@@ -124,6 +145,7 @@ class SocialMediaRepository:
 
     def delete_materia_by_link(self, link_id: int):
         """Deletes Materia associated with a link and clears the reference."""
+        self._ensure_connection()
         cursor = self.conn.cursor()
         
         try:
