@@ -100,95 +100,138 @@ class InstagramSpider:
 
             print(f"📸 Preparing for pattern-match screenshot...")
             
-            # Trigger lazy loading
+            # DISMISS MODALS EARLY (Before waiting for selectors)
+            try:
+                await page.evaluate("""() => {
+                    // Try to click 'X' (Close) button if it exists
+                    const closeBtn = document.querySelector('div[role="button"] svg[aria-label="Fechar"], div[role="button"] svg[aria-label="Close"]')?.closest('div[role="button"]');
+                    if (closeBtn) closeBtn.click();
+                    
+                    // Hide common fixed overlays immediately (darkened or white)
+                    document.querySelectorAll('div').forEach(div => {
+                        const s = window.getComputedStyle(div);
+                        if (s.position === 'fixed' && parseInt(s.zIndex) > 0) {
+                            if (s.backgroundColor.includes('rgba(0, 0, 0') || s.backgroundColor.includes('255, 255, 255') || s.backgroundColor === 'white') {
+                                if (parseInt(s.width) > 400 && parseInt(s.height) > 400) {
+                                    div.style.setProperty('display', 'none', 'important');
+                                }
+                            }
+                        }
+                    });
+                    document.body.style.setProperty('overflow', 'visible', 'important');
+                }""")
+            except: pass
+
+            # TRIGGER LAZY LOADING & WAIT FOR CONTENT
+            print(f"📸 Preparing for pattern-match screenshot...")
+            
+            # Use mouse wheel to trigger rendering
             try:
                 await page.mouse.wheel(0, 500)
                 await asyncio.sleep(0.5)
                 await page.mouse.wheel(0, -500)
-                await asyncio.sleep(0.8)
-                # Wait for images to be visible
-                await page.wait_for_selector("main img, .x1yvgwvq img, article img", timeout=30000)
-            except:
-                pass
+                await asyncio.sleep(0.5)
+            except: pass
 
-            # SELECTIVE UI CLEANUP (Preserving Sidebar/Layout)
+            # ---------------------------------------------------------
+            # SURGICAL CLEANUP & STABILIZATION
+            # ---------------------------------------------------------
             try:
-                await asyncio.sleep(1)
-                await page.evaluate("""() => {
-                    // We only hide intrusive popups/modals, NOT the app navigation
-                    const selectors = [
-                        'div[role="dialog"]', 
-                        'div.x1cy8zhl.x9f619.x78zum5.x1iyjqo2.x1n2onr6', // Login wall
-                        'div[style*="opacity: 0.5"]', // Overlay shadows
-                        'div[style*="background-color: rgba(0, 0, 0, 0.5)"]',
-                        'div._a9--._a9_0', // "Continue as" banner
-                        'div.x1qjc9as' // Cookie banner or similar overlays
-                    ];
-                    
-                    selectors.forEach(s => {
-                        document.querySelectorAll(s).forEach(el => {
-                            // Don't hide the main content
-                            if (el.contains(document.querySelector('article')) || 
-                                el.contains(document.querySelector('main'))) return;
-                                
-                            el.style.display = 'none';
-                            el.style.visibility = 'hidden';
-                        });
-                    });
+                # Execute precise surgical cleanup for the target element and the whole page
+                await page.evaluate("""(sel) => {
+                    // 1. Force remove ALL filters, blurs and login walls via global CSS
+                    const style = document.createElement('style');
+                    style.id = 'scraping-final-cleanup';
+                    style.innerHTML = `
+                        * { 
+                            filter: none !important; 
+                            -webkit-filter: none !important; 
+                            backdrop-filter: none !important;
+                            -webkit-backdrop-filter: none !important;
+                            mask: none !important;
+                            -webkit-mask: none !important;
+                        }
+                        body, html {
+                            overflow: visible !important;
+                            filter: none !important;
+                            background-color: white !important;
+                            height: auto !important;
+                            position: static !important;
+                        }
+                        /* Hide intrusive headers/footers/login prompts but KEEP sidebar legend */
+                        nav, header, [role="banner"], section._aa-- { display: none !important; }
+                        
+                        /* Ensure the Reel/Post area is bright and ignore any dimming classes */
+                        .x1yvgwvq, article {
+                            opacity: 1 !important;
+                            visibility: visible !important;
+                            filter: none !important;
+                            display: flex !important;
+                        }
+                        /* Hide overlay play buttons */
+                        .x1yc453h, ._a9-6, ._a9-7, ._a9-8 { display: none !important; }
+                    `;
+                    document.head.appendChild(style);
 
-                    // Remove blur filters
-                    document.querySelectorAll('*').forEach(el => {
-                        if (el.style.filter && el.style.filter.includes('blur')) {
-                            el.style.filter = 'none';
+                    // 2. Surgical removal of dimmed overlays (black or white fixed layers)
+                    document.querySelectorAll('div').forEach(div => {
+                        const s = window.getComputedStyle(div);
+                        if (s.position === 'fixed' || s.position === 'absolute') {
+                            const bg = s.backgroundColor;
+                            if (bg.includes('rgba(0, 0, 0') || bg.includes('rgb(0, 0, 0)') || bg.includes('255, 255, 255') || bg === 'white') {
+                                // Remove if it covers a significant area but doesn't contain the reel
+                                if (parseInt(s.width) > 400 && !div.contains(document.querySelector('.x1yvgwvq')) && !div.contains(document.querySelector('article'))) {
+                                    div.remove();
+                                }
+                            }
                         }
                     });
+                }""", "div.x1yvgwvq" if '/reel/' in url else "article")
+            except: pass
 
-                    document.body.style.overflow = 'auto';
-                    document.documentElement.style.overflow = 'auto';
-                }""")
-            except Exception as e:
-                print(f"⚠️ Cleanup failed: {e}")
-                pass
+            # Extended wait for stabilization and re-render
+            await asyncio.sleep(4)
 
+            # ---------------------------------------------------------
+            # STEP 1: CAPTURE SCREENSHOT
+            # ---------------------------------------------------------
             captured = False
-            # Check if this is a Reel/Video post
-            is_video = '/reel/' in url or (await article.locator("video").count() > 0 if '?img_index=' not in url else False)
-            
             try:
-                # Scroll article into view clearly and wait for it to be stable
-                await article.scroll_into_view_if_needed()
-                await asyncio.sleep(1)
+                # Target the specific container if possible
+                target = article
+                if '/reel/' in url:
+                    reel_container = page.locator("div.x1yvgwvq").first
+                    if await reel_container.count() > 0:
+                        target = reel_container
 
-                # Get the bounding box of the article to clip the page screenshot
-                # This is more robust than article.screenshot() which often timeouts
-                box = await article.bounding_box()
-                
+                box = await target.bounding_box()
                 if box:
-                    print(f"📸 Article found at {box}. Taking clipped screenshot...")
-                    # Clip with a bit of margin if needed, but box should be enough
-                    await page.screenshot(path=image_path, clip=box, timeout=15000)
-                    captured = True
-                    print(f"✅ Clipped page screenshot saved.")
-                else:
-                    # Fallback to standard capture if box fails
-                    if is_video:
-                        print("🎬 Reel/Video detected")
-                        target = page.locator("div.x1yvgwvq").first if '/reel/' in url else article
-                        if await target.count() == 0: target = article
-                        await target.screenshot(path=image_path, timeout=10000)
+                    print(f"📸 Element found at {box}. Taking clipped screenshot...")
+                    # For wide post boxes, narrow down to article if appropriate
+                    if not '/reel/' in url and box['width'] > 1200:
+                         article_el = page.locator("article").first
+                         if await article_el.count() > 0:
+                              new_box = await article_el.bounding_box()
+                              if new_box: box = new_box
+
+                    # Avoid tiny boxes
+                    if box['width'] < 100 or box['height'] < 100:
+                         await target.screenshot(path=image_path, timeout=15000)
                     else:
-                        await article.screenshot(path=image_path, timeout=10000)
+                         await page.screenshot(path=image_path, clip=box, timeout=25000)
+                    captured = True
+                    print(f"✅ Screenshot saved.")
+                else:
+                    await target.screenshot(path=image_path, timeout=15000)
                     captured = True
                     print(f"✅ Element screenshot saved.")
 
             except Exception as e:
-                print(f"⚠️ Screenshot failed: {e}. Trying full page screenshot as fallback...")
+                print(f"⚠️ Screenshot failed: {e}. Trying full page screenshot...")
                 try:
                     await page.screenshot(path=image_path)
                     captured = True
-                    print(f"✅ Full page screenshot saved as fallback.")
-                except Exception as e2:
-                    print(f"❌ Full page screenshot also failed: {e2}")
+                except: pass
 
             # ---------------------------------------------------------
             # STEP 2: TEXT EXTRACTION
@@ -196,128 +239,98 @@ class InstagramSpider:
             print(f"📝 Starting text extraction...")
             text_content = ""
             
-            # Strategy 1: Look for on-page text (usually best)
+            # Strategy 1: Article H1 (usually contains the caption)
             try:
                 caption_el = article.locator("h1").first
                 if await caption_el.count() > 0:
                     text_content = await caption_el.inner_text()
-                    print(f"📄 Found caption in H1")
-            except:
-                pass
+                    print("📄 Found caption in H1")
+            except: pass
 
-            # Strategy 2: Fallback to Meta Description
             if not text_content:
+                # Strategy 2: Meta description fallback (very common/reliable)
                 try:
-                    description_meta = await page.locator("meta[property='og:description']").get_attribute("content")
-                    if description_meta:
-                        print(f"⚠️ H1 missing. Using meta description...")
-                        if ': "' in description_meta:
-                            text_content = description_meta.split(': "', 1)[1].rstrip('"')
-                        else:
-                            text_content = description_meta
-                except:
-                    pass
-            
+                    meta = await page.get_attribute("meta[name='description']", "content")
+                    if meta:
+                        text_content = meta
+                        print("📄 Found caption in meta description")
+                except: pass
+
             # Extract Username for fallback
             username = "Midia Social"
             try:
-                username_meta = await page.locator("meta[property='og:title']").get_attribute("content")
-                if username_meta:
-                    if "(" in username_meta and ")" in username_meta:
-                        username = username_meta.split("(")[1].split(")")[0]
+                title_meta = await page.get_attribute("meta[property='og:title']", "content")
+                if title_meta:
+                    if "(" in title_meta and ")" in title_meta:
+                        username = title_meta.split("(")[1].split(")")[0]
                     else:
-                        username = username_meta.split("•")[0].strip()
-            except:
-                pass
+                        username = title_meta.split("•")[0].strip()
+            except: pass
 
-            # Extract Date (<time>)
+            # Extract Date
             post_date = None
             try:
                 time_el = article.locator("time").first
                 if await time_el.count() > 0:
                     post_date = await time_el.get_attribute("datetime")
-            except:
-                pass
+            except: pass
 
             # Final Fallback for text
             if not text_content:
                 text_content = username if username != "Midia Social" else "Midia Social Capture"
 
             # ---------------------------------------------------------
-            # CLEANING RULES (Emoji Logic)
+            # CLEANING & NORMALIZATION
             # ---------------------------------------------------------
             import re
-            def remove_emojis(text):
+            def cleanup_text(text):
+                # Normalize Unicode (convert stylized fonts to plain text)
+                text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('ascii')
+                # Remove non-ASCII punctuation/emojis but keep basic chars
                 return re.sub(r'[^\w\s,!.?@#&"\'()-]|_', '', text).strip()
             
-            def is_only_emojis(text):
-                cleaned = remove_emojis(text)
-                return len(cleaned) == 0 and len(text) > 0
-
             if text_content:
-                # Normalize Unicode (converts cursive/bold math symbols to plain letters)
-                text_content = unicodedata.normalize('NFKD', text_content).encode('ascii', 'ignore').decode('ascii')
-                
-                if is_only_emojis(text_content):
-                    text_content = username
-                else:
-                    cleaned_text = remove_emojis(text_content)
-                    if len(cleaned_text) < len(text_content):
-                        text_content = cleaned_text
+                text_content = cleanup_text(text_content)
             
-            if not text_content.strip():
+            if not text_content:
                  text_content = username
 
             print(f"📝 Final Title: {text_content[:50]}...")
 
             # ---------------------------------------------------------
-            # STEP 3: FALLBACK CAPTURE (If needed)
+            # STEP 3: DOWNLOAD FALLBACK (If capture failed or too small)
             # ---------------------------------------------------------
-            if not captured or (os.path.exists(image_path) and os.path.getsize(image_path) < 15000):
-                print(f"⚠️ Screenshot missing or too small ({os.path.getsize(image_path) if os.path.exists(image_path) else 'N/A'} bytes), trying download method...")
+            if not captured or (os.path.exists(image_path) and os.path.getsize(image_path) < 3000):
+                print("⚠️ Screenshot missing or too small, trying direct download...")
                 try:
                     cover_url = await page.evaluate("""() => {
                         const article = document.querySelector('article') || document;
                         const imgs = Array.from(article.querySelectorAll('img'));
-                        for (let img of imgs) {
-                            if (img.src && (img.src.includes('fbcdn') || img.src.includes('instagram')) && img.width > 200) return img.src;
-                        }
+                        const best = imgs.find(img => img.width > 200 && img.src && (img.src.includes('fbcdn') || img.src.includes('instagram')));
+                        if (best) return best.src;
                         const video = article.querySelector('video');
                         if (video && video.poster) return video.poster;
-                        // Try meta as ultimate fallback
-                        const ogImage = document.querySelector('meta[property="og:image"]');
-                        if (ogImage) return ogImage.content;
-                        return null;
+                        const meta = document.querySelector('meta[property="og:image"]');
+                        return meta ? meta.content : null;
                     }""")
                     
                     if cover_url:
-                        print(f"📥 Attempting to download fallback image: {cover_url[:60]}...")
                         import aiohttp
                         async with aiohttp.ClientSession() as session:
                             async with session.get(cover_url) as resp:
                                 if resp.status == 200:
                                     with open(image_path, 'wb') as f:
                                         f.write(await resp.read())
-                                    print(f"✅ Downloaded cover image as fallback.")
+                                    print("✅ Downloaded cover image as fallback.")
                                     captured = True
-                                else:
-                                    print(f"❌ Fallback download failed with status {resp.status}")
-                    else:
-                        print("❌ Could not find cover URL for fallback.")
-                except Exception as e:
-                    print(f"❌ Download fallback failed: {e}")
+                except: pass
 
-            # FINAL CHECK: Did we actually get a file?
             if not os.path.exists(image_path):
-                print(f"❌ CRITICAL: No image file created at {image_path}")
                 return {"status": "error", "error": "Image capture failed (no file created)"}
 
-            # Save text content with BOM to help C# detection
+            # Save results
             with open(text_path, "w", encoding="utf-8-sig") as f:
                 f.write(text_content)
-
-
-            # Legacy Adapter call removed. Orchestration is now handled by ProcessingService.
             
             return {
                 "text_content": text_content,
@@ -330,13 +343,9 @@ class InstagramSpider:
         except Exception as e:
             print(f"❌ Error scraping post: {e}")
             try:
-                is_exists = await page.title()
-                if "não está disponível" in is_exists:
-                     return {"status": "not_found", "error": "Content unavailable"}
-            except:
-                pass
-            
-            # await page.screenshot(path="error_instagram.png")
+                title = await page.title()
+                if "não está disponível" in title: return {"status": "not_found", "error": "Content unavailable"}
+            except: pass
             return {"status": "error", "error": str(e)}
         finally:
             await context.close()
