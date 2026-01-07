@@ -72,9 +72,11 @@ class TwitterSpider:
         page = await context.new_page()
 
         try:
-            # Force x.com to avoid Cloudflare/Redirect issues
+            # Force https and x.com to avoid redirects and Cloudflare issues
             if "twitter.com" in url:
                 url = url.replace("twitter.com", "x.com")
+            if url.startswith("http://"):
+                url = url.replace("http://", "https://", 1)
 
             print(f"🔗 Navigating directly to {url}...")
             # Try direct navigation first
@@ -109,14 +111,22 @@ class TwitterSpider:
             if "not found" in page_title.lower() or "página não encontrada" in page_title.lower():
                 return {"status": "not_found", "error": "Tweet not found (404 Title)"}
 
-            # Wait for main content (the tweet text)
+            # Wait for either main content (the tweet text) OR a known error message
+            # This avoids waiting for a 45s timeout on 404 pages
             try:
-                await page.wait_for_selector("[data-testid='tweetText']", timeout=45000)
+                # Combined selector: wait for tweet text OR the common error container
+                # Twitter error messages usually appear in a span/div within a specific container
+                await page.wait_for_selector("[data-testid='tweetText'], [data-testid='error-detail'], text='Ih, esta página não existe', text='Hmm...this page doesn\\'t exist'", timeout=30000)
             except TimeoutError:
-                # Double check for 404 if timeout occurred
-                if await page.locator("text='Ih, esta página não existe'").count() > 0:
-                    return {"status": "not_found", "error": "Tweet not found (404)"}
-                raise
+                # If nothing appears in 30s, check again for error patterns manually
+                print("⚠️ Timeout waiting for tweet or error. Checking patterns...")
+                pass
+
+            # Check for 404 or prohibited content
+            for pattern in error_patterns:
+                if await page.locator(pattern).count() > 0:
+                    print(f"⚠️ Twitter error detected: {pattern}")
+                    return {"status": "not_found", "error": "Tweet or account not found (404)"}
 
             # Extract content
             tweet_text = await page.locator("[data-testid='tweetText']").first.inner_text()
