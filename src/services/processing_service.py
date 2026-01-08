@@ -83,6 +83,12 @@ class SocialMediaProcessor:
                 with attempt:
                     result = await spider.scrape_post(spider_input)
                     
+                    # Handle 404 Not Found (skip retries and update status to 3)
+                    if result and result.get('status') == 'not_found':
+                        logger.warning(f"⚠️ [Link {link_id}] 404 Not Found detected. Skipping retries.")
+                        self.repo.update_link_status(link_id, 3)
+                        return False
+
                     if not result or result.get('status') != 'success':
                         raise Exception(result.get('error', 'Unknown scraping error'))
             
