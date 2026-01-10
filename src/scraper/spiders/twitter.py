@@ -9,116 +9,44 @@ class TwitterSpider:
     def __init__(self, manager: BrowserManager):
         self.manager = manager
         self.settings = get_settings()
-        self.state_file = "twitter_state.json"
-
-    async def ensure_login(self, page: Page):
-        """Garante que o usuário está logado no Twitter/X."""
-        try:
-            # Verifica se já está logado por elementos da UI
-            if await page.locator("[data-testid='SideNav_AccountSwitcher_Button']").count() > 0:
-                return
-
-            print("🔵 Verificando status de login no Twitter...")
-            await page.goto("https://x.com/home", timeout=60000, wait_until='domcontentloaded' )
-            
-            if await page.locator("[data-testid='SideNav_AccountSwitcher_Button']").count() > 0:
-                print("✅ Sessão ativa via cookies.")
-                return
-
-            print("🔑 Sessão expirada. Iniciando fluxo de login...")
-            await page.goto("https://x.com/login", timeout=60000 )
-
-            # Usuário
-            username_input = await page.wait_for_selector("input[autocomplete='username'], input[name='text']", timeout=10000)
-            await username_input.fill(self.settings.TWITTER_USER)
-            await page.click("button:has-text('Próximo'), button:has-text('Next')")
-
-            # Senha
-            await asyncio.sleep(2)
-            password_input = await page.wait_for_selector("input[name='password'], input[type='password']", timeout=15000)
-            await password_input.fill(self.settings.TWITTER_PASS)
-
-            # Botão Entrar
-            await asyncio.sleep(1)
-            await page.click("button[data-testid='LoginForm_Login_Button'], button:has-text('Log in'), button:has-text('Entrar')")
-
-            await page.wait_for_selector("[data-testid='SideNav_AccountSwitcher_Button']", timeout=20000)
-            print("✅ Login realizado com sucesso.")
-
-            # Salva o estado da sessão
-            await page.context.storage_state(path=self.state_file)
-        except Exception as e:
-            print(f"❌ Falha no login do Twitter: {e}")
-            raise
+        self.state_file = "twitter_state.json" # Manter o atributo, mas não usá-lo para login
 
     async def scrape_post(self, link_data: dict):
         """Navega até um tweet e realiza a captura."""
-        url = link_data.get('url')
-        link_id = link_data.get('link_id', 'unknown')
-        
-        if not url:
-             return {"status": "error", "error": "No URL provided"}
+        url = link_data.get("url")
+        link_id = link_data.get("link_id", "unknown")
 
-        # Usa o contexto robusto do BrowserManager
-        context = await self.manager.new_context(storage_state=self.state_file)
+        if not url:
+            return {"status": "error", "error": "No URL provided"}
+
+        context = await self.manager.new_context()
         page = await context.new_page()
 
         try:
-            # Normaliza a URL para x.com
             url = url.replace("twitter.com", "x.com").replace("http://", "https://" )
-            
             print(f"🔗 [Link {link_id}] Acessando: {url}")
             await page.goto(url, timeout=90000, wait_until="domcontentloaded")
-            
-            # Verifica se foi redirecionado para login
-            if "x.com/login" in page.url or await page.locator("[data-testid='loginButton']").count() > 0:
-                print("🔑 Redirecionado para login. Autenticando...")
-                await self.ensure_login(page)
-                await page.goto(url, timeout=90000, wait_until="networkidle")
 
-            # --- CORREÇÃO DOS SELETORES DE ERRO ---
-            # Usamos a sintaxe :has-text() que é a correta para o Playwright
-            error_patterns = [
-                ":has-text(\"Hmm...this page doesn't exist\")",
-                ":has-text(\"Página não encontrada\")",
-                ":has-text(\"Ih, esta página não existe\")",
-                ":has-text(\"Esta conta não existe\")",
-                ":has-text(\"This account doesn't exist\")"
-            ]
-            
-            # Espera pelo Tweet OU por uma mensagem de erro (sem quebrar o seletor)
-            try:
-                # Combinamos apenas seletores CSS válidos
-                await page.wait_for_selector("[data-testid='tweetText'], [data-testid='error-detail']", timeout=20000)
-            except TimeoutError:
-                print("⚠️ Timeout aguardando tweet. Verificando se a página existe...")
+            # Adiciona uma espera para a página carregar completamente
+            await asyncio.sleep(5)
 
-            # Verifica se alguma mensagem de erro está visível
-            for pattern in error_patterns:
-                if await page.locator(pattern).count() > 0:
-                    print(f"⚠️ Erro do Twitter detectado: {pattern}")
-                    return {"status": "not_found", "error": "Tweet or account not found (404)"}
+            # Tenta capturar o tweet principal (o de resposta)
+            main_tweet_selector = "article[data-testid=\'tweet\']"
+            await page.wait_for_selector(main_tweet_selector, timeout=20000)
+            main_tweet = page.locator(main_tweet_selector).first
 
-            # Extração de conteúdo
-            tweet_locator = page.locator("[data-testid='tweetText']").first
-            tweet_text = await tweet_locator.inner_text() if await tweet_locator.count() > 0 else ""
-            
+            # Captura o screenshot e o texto do tweet de resposta
+            image_path = f"captures/twitter_{link_id}_reply.png"
+            text_path = f"captures/twitter_{link_id}_reply.txt"
+            os.makedirs("captures", exist_ok=True)
+
+            await main_tweet.screenshot(path=image_path)
+            tweet_text = await main_tweet.inner_text()
+
             # Normalização de texto
             if tweet_text:
-                tweet_text = unicodedata.normalize('NFKD', tweet_text).encode('ascii', 'ignore').decode('ascii')
+                tweet_text = unicodedata.normalize("NFKD", tweet_text).encode("ascii", "ignore").decode("ascii")
 
-            # Caminhos de saída
-            image_path = f"captures/twitter_{link_id}.png"
-            text_path = f"captures/twitter_{link_id}.txt"
-            os.makedirs("captures", exist_ok=True)
-            
-            # Screenshot do tweet (tentamos focar no elemento do tweet para um print melhor)
-            tweet_article = page.locator("article[data-testid='tweet']").first
-            if await tweet_article.count() > 0:
-                await tweet_article.screenshot(path=image_path)
-            else:
-                await page.screenshot(path=image_path)
-            
             with open(text_path, "w", encoding="utf-8-sig") as f:
                 f.write(tweet_text)
 
