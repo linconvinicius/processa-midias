@@ -65,11 +65,12 @@ class InstagramSpider:
             try:
                 element = page.locator("article h1, article span._ap30").first
                 caption = await element.inner_text(timeout=5000)
+                caption = caption.strip('"')  # Remove aspas do início e fim
             except:
                 try:
                     meta_content = await page.locator('meta[property="og:description"]').get_attribute("content", timeout=3000)
                     if meta_content and ":" in meta_content:
-                        caption = meta_content.split(":", 1)[-1].strip()
+                        caption = meta_content.split(":", 1)[-1].strip().strip('"')  # Remove aspas
                 except: caption = ""
 
             # 4. LÓGICA INTELIGENTE: Detectar se a legenda é apenas Emojis
